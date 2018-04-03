@@ -1,37 +1,31 @@
 digraph G {
   lainBuild [label="`lain build`"];
   pullBuildBase [label="docker pull ${build.base}"];
-  isBuildBaseImageUpdated [label="${build.base} 发生更新"];
   prepareExist [label="存在 build.prepare"];
   buildWithoutPrepare [label="以 ${build.base} 为基底镜像构建"];
   prepareVersionExist [label="存在 build.prepare.version"];
   keep [label="维持原来的逻辑"];
-  searchPrepareImage [label="从本地和远端按 commit time 寻找最新的 prepare 镜像"];
-  prepareImageExist [label="存在 prepare 镜像"];
-  buildPrepareImage [label="构建 prepare 镜像，打标签为 prepare-${commit_time}-${commit_id} 并 push"];
-  gitDiff [label="`git diff` prepare 镜像的 commit id 与当前 commit id"];
-  needRePrepare [label="${build.base} 发生变化或 ${build.prepare.script} 发生变化"];
-  buildWithPrepare [label="以 commit time 最新的 prepare 镜像为基底镜像构建"];
+  searchPrepareImage [label="从本地和远端按 prepare timestamp 寻找最新的 prepare 镜像"];
+  prepareImageExist [label="存在与 ${build.base} 的镜像 ID 一致的 prepare 镜像"];
+  buildPrepareImage [label="构建 prepare 镜像，打标签为 prepare-ImageID(${build.base})-hash(${build.base}${build.prepare.script})-${timestamp} 并 push"];
+  isHashUpdated [label="hash(${build.base}${build.prepare.script}) 发生变化"];
+  buildWithPrepare [label="以最新的 prepare 镜像为基底镜像构建"];
 
   lainBuild -> pullBuildBase -> prepareExist;
 
   prepareExist -> buildWithoutPrepare [label="否"];
 
-  prepareExist -> isBuildBaseImageUpdated [label="是"];
-  isBuildBaseImageUpdated -> buildPrepareImage [label="是"];
-
-  isBuildBaseImageUpdated -> prepareVersionExist [label="否"];
+  prepareExist -> prepareVersionExist [label="是"];
   prepareVersionExist -> keep [label="是"];
 
   prepareVersionExist -> searchPrepareImage [label="否"];
   searchPrepareImage -> prepareImageExist;
   prepareImageExist -> buildPrepareImage [label="否"];
 
-  prepareImageExist -> gitDiff [label="是"];
-  gitDiff -> needRePrepare;
-  needRePrepare -> buildPrepareImage [label="是"];
+  prepareImageExist -> isHashUpdated [label="是"];
+  isHashUpdated -> buildPrepareImage [label="是"];
 
   buildPrepareImage -> buildWithPrepare;
 
-  needRePrepare -> buildWithPrepare [label="否"];
+  isHashUpdated -> buildWithPrepare [label="否"];
 }
